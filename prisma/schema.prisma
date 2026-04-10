@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  taxCode   String   @map("tax_code")
+  address   String
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users        User[]
+  declarations Declaration[]
+
+  @@map("companies")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         Role     @default(ACCOUNTANT)
+  companyId    String   @map("company_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  declarations Declaration[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  ACCOUNTANT
+}
+
+model Declaration {
+  id              String   @id @default(cuid())
+  companyId       String   @map("company_id")
+  date            DateTime
+  preparedBy      String   @map("prepared_by")
+  representative  String
+  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(18, 2)
+  createdById     String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company  Company           @relation(fields: [companyId], references: [id])
+  createdBy User             @relation(fields: [createdById], references: [id])
+  items    DeclarationItem[]
+
+  @@map("declarations")
+}
+
+model DeclarationItem {
+  id            String  @id @default(cuid())
+  declarationId String  @map("declaration_id")
+  purchaseDate  DateTime @map("purchase_date")
+  sellerName    String  @map("seller_name")
+  idNumber      String  @map("id_number")
+  phone         String?
+  address       String
+  productName   String  @map("product_name")
+  unit          String
+  quantity      Decimal @db.Decimal(18, 3)
+  unitPrice     Decimal @map("unit_price") @db.Decimal(18, 2)
+  totalPrice    Decimal @map("total_price") @db.Decimal(18, 2)
+  notes         String?
+
+  declaration Declaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+
+  @@map("declaration_items")
+}
